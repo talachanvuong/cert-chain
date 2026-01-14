@@ -2,7 +2,11 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 export const RequireAdmin = () => {
-  const { address } = useAuth()
+  const { address, loading } = useAuth()
+
+  if (loading) {
+    return null
+  }
 
   if (!address) {
     return <Navigate to="/admin/login" replace />
@@ -12,7 +16,11 @@ export const RequireAdmin = () => {
 }
 
 export const RequireAnonymous = () => {
-  const { address } = useAuth()
+  const { address, loading } = useAuth()
+
+  if (loading) {
+    return null
+  }
 
   if (address) {
     return <Navigate to="/admin/dashboard" replace />

@@ -3,6 +3,7 @@ import { AuthContext } from './AuthContext'
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [address, setAddress] = useState<string | null>(null)
+  const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
     const savedAddress = sessionStorage.getItem('address')
@@ -10,6 +11,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (savedAddress) {
       setAddress(savedAddress)
     }
+
+    setLoading(false)
   }, [])
 
   const login = (address: string) => {
@@ -26,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         address,
+        loading,
         login,
         logout,
       }}
