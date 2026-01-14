@@ -1,15 +1,19 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { Dashboard } from '../pages/Dashboard'
+import { Login } from '../pages/Login'
 import { RequireAdmin, RequireAnonymous } from './RequireRoutes'
 
 export const AppRoutes = () => (
   <Routes>
     <Route element={<RequireAnonymous />}>
-      <Route path="/admin/login" element={<p>Login</p>} />
+      <Route path="/admin/login" element={<Login />} />
     </Route>
 
     <Route path="/admin" element={<RequireAdmin />}>
       <Route index element={<Navigate to="dashboard" replace />} />
-      <Route path="dashboard" element={<p>Dashboard</p>} />
+      <Route path="dashboard" element={<Dashboard />} />
+      <Route path="create" element={<p>Create</p>} />
+      <Route path="list" element={<p>List</p>} />
     </Route>
   </Routes>
 )

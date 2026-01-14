@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { AdminLayout } from '../layouts/AdminLayout'
 
 export const RequireAdmin = () => {
   const { address, loading } = useAuth()
@@ -12,7 +13,11 @@ export const RequireAdmin = () => {
     return <Navigate to="/admin/login" replace />
   }
 
-  return <Outlet />
+  return (
+    <AdminLayout>
+      <Outlet />
+    </AdminLayout>
+  )
 }
 
 export const RequireAnonymous = () => {
