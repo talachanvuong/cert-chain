@@ -37,3 +37,6 @@ types
 
 # Hardhat coverage reports
 coverage
+
+# Hardhat Ignition deployments
+deployments
