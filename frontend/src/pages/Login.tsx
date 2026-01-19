@@ -1,12 +1,11 @@
+import { walletClient } from '../config/client'
 import { useAuth } from '../hooks/useAuth'
-import { useClient } from '../hooks/useClient'
 
 export const Login = () => {
   const { login } = useAuth()
-  const { connectWallet } = useClient()
 
   const handleLogin = async () => {
-    const account = await connectWallet()
+    const [account] = await walletClient.requestAddresses()
     login(account)
   }
 

@@ -1,27 +1,28 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { formatEther, type Address } from 'viem'
+import { publicClient } from '../config/client'
 import { useAuth } from '../hooks/useAuth'
-import { useClient } from '../hooks/useClient'
 
 export const AdminLayout = ({ children }: { children: ReactNode }) => {
   const { address, logout } = useAuth()
-  const { getBalance } = useClient()
   const [balance, setBalance] = useState<string>('0 ETH')
 
-  const safeAddress = address!
-  const formattedSafeAddress = `${safeAddress.slice(
-    0,
-    4
-  )}...${safeAddress.slice(-4)}`
+  const formattedAddress = `${address.slice(0, 4)}...${address.slice(-4)}`
 
   useEffect(() => {
-    fetchBalance()
-  }, [])
+    const getBalance = async (address: Address) => {
+      const balance = await publicClient.getBalance({ address })
+      const ethBalance = Number(formatEther(balance))
 
-  const fetchBalance = async () => {
-    const balance = await getBalance(safeAddress)
-    setBalance(balance)
-  }
+      const formatter = new Intl.NumberFormat('vi-vn')
+      const formattedBalance = formatter.format(ethBalance) + ' ETH'
+
+      setBalance(formattedBalance)
+    }
+
+    getBalance(address)
+  }, [address])
 
   const handleLogout = () => {
     logout()
@@ -59,7 +60,7 @@ export const AdminLayout = ({ children }: { children: ReactNode }) => {
                 {balance}
               </p>
               <p className="font-mono text-sm font-semibold text-gray-700">
-                {formattedSafeAddress}
+                {formattedAddress}
               </p>
             </div>
 

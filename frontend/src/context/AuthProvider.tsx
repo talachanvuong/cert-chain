@@ -1,27 +1,25 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { zeroAddress, type Address } from 'viem'
 import { AuthContext } from './AuthContext'
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [address, setAddress] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
+  const [address, setAddress] = useState<Address>(zeroAddress)
 
   useEffect(() => {
-    const savedAddress = sessionStorage.getItem('address')
+    const savedAddress = sessionStorage.getItem('address') as Address | null
 
     if (savedAddress) {
       setAddress(savedAddress)
     }
-
-    setLoading(false)
   }, [])
 
-  const login = (address: string) => {
+  const login = (address: Address) => {
     setAddress(address)
     sessionStorage.setItem('address', address)
   }
 
   const logout = () => {
-    setAddress(null)
+    setAddress(zeroAddress)
     sessionStorage.removeItem('address')
   }
 
@@ -29,7 +27,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         address,
-        loading,
         login,
         logout,
       }}

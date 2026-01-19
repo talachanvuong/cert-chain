@@ -1,9 +1,9 @@
 import { createContext } from 'react'
+import type { Address } from 'viem'
 
 interface ProviderProps {
-  address: string | null
-  loading: boolean
-  login: (address: string) => void
+  address: Address
+  login: (address: Address) => void
   logout: () => void
 }
 
