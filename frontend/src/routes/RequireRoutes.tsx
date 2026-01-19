@@ -1,12 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import { zeroAddress } from 'viem'
 import { useAuth } from '../hooks/useAuth'
 import { AdminLayout } from '../layouts/AdminLayout'
 
 export const RequireAdmin = () => {
-  const { address } = useAuth()
+  const { isOwner } = useAuth()
 
-  if (address === zeroAddress) {
+  if (!isOwner) {
     return <Navigate to="/admin/login" replace />
   }
 
@@ -18,9 +17,9 @@ export const RequireAdmin = () => {
 }
 
 export const RequireAnonymous = () => {
-  const { address } = useAuth()
+  const { isOwner } = useAuth()
 
-  if (address !== zeroAddress) {
+  if (isOwner) {
     return <Navigate to="/admin/dashboard" replace />
   }
 

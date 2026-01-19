@@ -1,17 +1,42 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { zeroAddress, type Address } from 'viem'
+import { isAddress, zeroAddress, type Address } from 'viem'
+import { certificate } from '../config/contract'
 import { AuthContext } from './AuthContext'
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [address, setAddress] = useState<Address>(zeroAddress)
+  const [isOwner, setIsOwner] = useState<boolean>(false)
 
   useEffect(() => {
-    const savedAddress = sessionStorage.getItem('address') as Address | null
+    const savedAddress = sessionStorage.getItem('address')
 
-    if (savedAddress) {
-      setAddress(savedAddress)
+    if (!savedAddress) {
+      return
     }
+
+    if (!isAddress(savedAddress)) {
+      return
+    }
+
+    if (savedAddress === zeroAddress) {
+      return
+    }
+
+    setAddress(savedAddress)
   }, [])
+
+  useEffect(() => {
+    if (address === zeroAddress) {
+      return
+    }
+
+    const checkOwner = async () => {
+      const owner = (await certificate.read.owner()) as Address
+      setIsOwner(address === owner)
+    }
+
+    checkOwner()
+  }, [address])
 
   const login = (address: Address) => {
     setAddress(address)
@@ -20,6 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setAddress(zeroAddress)
+    setIsOwner(false)
     sessionStorage.removeItem('address')
   }
 
@@ -27,6 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         address,
+        isOwner,
         login,
         logout,
       }}
