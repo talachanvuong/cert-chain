@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { isAddress, zeroAddress, type Address } from 'viem'
-import { certificate } from '../config/contract'
+import { certificate } from '../../config/contract'
 import { AuthContext } from './AuthContext'
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
