@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const checkOwner = async () => {
-      const owner = (await certificate.read.owner()) as Address
+      const owner = await certificate.read.owner()
       setIsOwner(address === owner)
     }
 
