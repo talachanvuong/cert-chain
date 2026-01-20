@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { UserRejectedRequestError } from 'viem'
+import { toast } from 'react-toastify'
 import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 import { useAuth } from '../hooks/useAuth'
@@ -30,11 +30,10 @@ export const Create = () => {
 
       await publicClient.waitForTransactionReceipt({ hash })
 
+      toast.success('Tạo chứng chỉ thành công')
       navigate('/admin/list')
-    } catch (error) {
-      if (error instanceof UserRejectedRequestError) {
-        return
-      }
+    } catch {
+      toast.error('Giao dịch thất bại')
     }
   }
 
