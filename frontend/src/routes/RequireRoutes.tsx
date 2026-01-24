@@ -1,17 +1,14 @@
-import { useEffect } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { AdminLayout } from '../layouts/AdminLayout'
 
 export const RequireAdmin = () => {
   const { isOwner } = useAuth()
-  const navigate = useNavigate()
+  const location = useLocation()
 
-  useEffect(() => {
-    if (!isOwner) {
-      navigate('/admin/login')
-    }
-  }, [isOwner])
+  if (!isOwner) {
+    return <Navigate to="/admin/login" state={{ from: location }} replace />
+  }
 
   return (
     <AdminLayout>
@@ -22,13 +19,12 @@ export const RequireAdmin = () => {
 
 export const RequireAnonymous = () => {
   const { isOwner } = useAuth()
-  const navigate = useNavigate()
+  const location = useLocation()
 
-  useEffect(() => {
-    if (isOwner) {
-      navigate('/admin/dashboard')
-    }
-  }, [isOwner])
+  if (isOwner) {
+    const from = location.state?.from?.pathname || '/admin/dashboard'
+    return <Navigate to={from} replace />
+  }
 
   return <Outlet />
 }
