@@ -15,6 +15,7 @@ interface Certificate {
   issuer: Address
   issuedAt: number
   revoked: boolean
+  revokedAt?: number
   studentId: string
   studentName: string
   dob: number
@@ -61,6 +62,27 @@ export const Detail = () => {
         return
       }
 
+      let revokedAt: number | undefined
+
+      if (data[5]) {
+        const events = await certificate.getEvents.CertificateUpdated(
+          { _certificateHash: hash },
+          { fromBlock: 0n, toBlock: 'latest' }
+        )
+
+        const revokedEvent = events.find((event) => {
+          const action = event.args._certificateAction
+          return action === 1
+        })
+
+        if (revokedEvent) {
+          const block = await publicClient.getBlock({
+            blockNumber: revokedEvent.blockNumber,
+          })
+          revokedAt = Number(block.timestamp)
+        }
+      }
+
       setCert({
         hash,
         name: data[1],
@@ -68,6 +90,7 @@ export const Detail = () => {
         issuer: data[3],
         issuedAt,
         revoked: data[5],
+        revokedAt,
         studentId: data[6],
         studentName: data[7],
         dob: Number(data[8]),
@@ -89,11 +112,18 @@ export const Detail = () => {
         { account: address }
       )
 
-      await publicClient.waitForTransactionReceipt({ hash: processHash })
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: processHash,
+      })
+
+      const block = await publicClient.getBlock({
+        blockNumber: receipt.blockNumber,
+      })
+      const revokedAt = Number(block.timestamp)
 
       toast.success('Thu hồi chứng chỉ thành công')
 
-      setCert({ ...cert, revoked: true })
+      setCert({ ...cert, revoked: true, revokedAt })
     } catch {
       toast.error('Giao dịch thất bại')
     } finally {
@@ -179,12 +209,21 @@ export const Detail = () => {
             </p>
           </div>
 
-          <div className="p-4 rounded-lg bg-gray-50">
+          <div className="p-4 mb-4 rounded-lg bg-gray-50">
             <p className="mb-2 text-sm text-gray-600">Ngày cấp</p>
             <p className="font-semibold text-gray-900">
               {formatDateTime(cert.issuedAt)}
             </p>
           </div>
+
+          {cert.revoked && cert.revokedAt && (
+            <div className="p-4 mb-4 border-2 border-red-300 rounded-lg bg-red-50">
+              <p className="mb-2 text-sm text-red-600">Ngày thu hồi</p>
+              <p className="font-semibold text-red-900">
+                {formatDateTime(cert.revokedAt)}
+              </p>
+            </div>
+          )}
         </div>
 
         {!cert.revoked && (
