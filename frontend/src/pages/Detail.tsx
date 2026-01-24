@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import type { Address } from 'viem'
+import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 import { useAuth } from '../hooks/useAuth'
 
@@ -80,9 +82,23 @@ export const Detail = () => {
     if (!window.confirm('Bạn có chắc chắn muốn thu hồi chứng chỉ này?')) return
 
     setIsRevoking(true)
-    await certificate.write.revokeCertificate([cert.hash], { account: address })
-    setCert({ ...cert, revoked: true })
-    setIsRevoking(false)
+
+    try {
+      const processHash = await certificate.write.revokeCertificate(
+        [cert.hash],
+        { account: address }
+      )
+
+      await publicClient.waitForTransactionReceipt({ hash: processHash })
+
+      toast.success('Thu hồi chứng chỉ thành công')
+
+      setCert({ ...cert, revoked: true })
+    } catch {
+      toast.error('Giao dịch thất bại')
+    } finally {
+      setIsRevoking(false)
+    }
   }
 
   if (!cert) {
