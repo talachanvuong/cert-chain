@@ -29,6 +29,7 @@ contract Certificate {
     );
 
     error NotOwner();
+    error NotFound();
 
     modifier onlyOwner() {
         if (msg.sender != owner) {
@@ -71,5 +72,17 @@ contract Certificate {
         });
 
         emit CertificateUpdated(certificateHash, CertificateAction.Issued);
+    }
+
+    function revokeCertificate(bytes32 _certificateHash) external onlyOwner {
+        CertificateInfo storage certificate = certificates[_certificateHash];
+
+        if (certificate.issuedAt == 0) {
+            revert NotFound();
+        }
+
+        certificate.revoked = true;
+
+        emit CertificateUpdated(_certificateHash, CertificateAction.Revoked);
     }
 }

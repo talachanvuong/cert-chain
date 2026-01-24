@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Address } from 'viem'
 import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
@@ -19,6 +20,8 @@ const ACTION_MAP: Record<number, CertificateAction> = {
 }
 
 export const List = () => {
+  const navigate = useNavigate()
+
   const [filters, setFilters] = useState<CertificateAction[]>(ACTIONS)
   const [data, setData] = useState<CertificateEvent[]>([])
 
@@ -96,14 +99,15 @@ export const List = () => {
         {filteredData.map((item) => (
           <div
             className="grid items-center px-6 py-4 transition bg-white border border-gray-100 shadow-sm cursor-pointer grid-cols-23 rounded-xl hover:border-blue-200 hover:shadow-md"
-            key={item.hash}
+            key={`${item.hash}-${item.timestamp}`}
+            onClick={() => navigate(`/admin/detail/${item.hash}`)}
           >
             <div className="font-mono text-sm text-blue-600 col-span-16">
               {item.hash}
             </div>
 
             <div className="flex justify-center col-span-3">
-              <span
+              <p
                 className={`px-3 py-1 text-xs font-medium rounded-md ${
                   item.action === 'Đã tạo'
                     ? 'bg-green-50 text-green-700'
@@ -111,7 +115,7 @@ export const List = () => {
                 }`}
               >
                 {item.action}
-              </span>
+              </p>
             </div>
 
             <div className="col-span-4 text-sm text-right text-gray-600">

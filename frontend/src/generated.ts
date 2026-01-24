@@ -4,6 +4,7 @@
 
 export const certificateAbi = [
   { type: 'constructor', inputs: [], stateMutability: 'nonpayable' },
+  { type: 'error', inputs: [], name: 'NotFound' },
   { type: 'error', inputs: [], name: 'NotOwner' },
   {
     type: 'event',
@@ -60,5 +61,14 @@ export const certificateAbi = [
     name: 'owner',
     outputs: [{ name: '', internalType: 'address', type: 'address' }],
     stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_certificateHash', internalType: 'bytes32', type: 'bytes32' },
+    ],
+    name: 'revokeCertificate',
+    outputs: [],
+    stateMutability: 'nonpayable',
   },
 ] as const
