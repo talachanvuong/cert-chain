@@ -3,7 +3,7 @@ import type { Address } from 'viem'
 import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 
-type CertificateAction = 'Đã tạo' | 'Đã chỉnh sửa' | 'Đã thu hồi'
+type CertificateAction = 'Đã tạo' | 'Đã thu hồi'
 
 interface CertificateEvent {
   hash: Address
@@ -11,10 +11,15 @@ interface CertificateEvent {
   timestamp: number
 }
 
-export const List = () => {
-  const actions: CertificateAction[] = ['Đã tạo', 'Đã chỉnh sửa', 'Đã thu hồi']
+const ACTIONS: CertificateAction[] = ['Đã tạo', 'Đã thu hồi']
 
-  const [filters, setFilters] = useState<CertificateAction[]>(actions)
+const ACTION_MAP: Record<number, CertificateAction> = {
+  0: 'Đã tạo',
+  1: 'Đã thu hồi',
+}
+
+export const List = () => {
+  const [filters, setFilters] = useState<CertificateAction[]>(ACTIONS)
   const [data, setData] = useState<CertificateEvent[]>([])
 
   useEffect(() => {
@@ -24,33 +29,26 @@ export const List = () => {
         { fromBlock: 0n, toBlock: 'latest' }
       )
 
-      const convertToAction = (raw: number) => {
-        const map: Record<number, CertificateAction> = {
-          0: 'Đã tạo',
-          1: 'Đã chỉnh sửa',
-          2: 'Đã thu hồi',
-        }
+      const result: CertificateEvent[] = []
 
-        return map[raw]
+      for (const event of events) {
+        const { _certificateHash, _certificateAction } = event.args
+
+        if (!_certificateHash || _certificateAction === undefined) continue
+        if (!ACTION_MAP[_certificateAction]) continue
+
+        const block = await publicClient.getBlock({
+          blockNumber: event.blockNumber,
+        })
+
+        result.push({
+          hash: _certificateHash as Address,
+          action: ACTION_MAP[_certificateAction],
+          timestamp: Number(block.timestamp),
+        })
       }
 
-      const data: CertificateEvent[] = await Promise.all(
-        events.map(async (event) => {
-          const { _certificateHash, _certificateAction } = event.args
-
-          const block = await publicClient.getBlock({
-            blockNumber: event.blockNumber,
-          })
-
-          return {
-            hash: _certificateHash as Address,
-            action: convertToAction(_certificateAction as number),
-            timestamp: Number(block.timestamp),
-          }
-        })
-      )
-
-      setData(data)
+      setData(result)
     }
 
     fetchEvents()
@@ -73,11 +71,11 @@ export const List = () => {
   return (
     <div className="max-w-4xl mx-auto mt-10">
       <div className="flex justify-center gap-4 mb-6">
-        {actions.map((action) => (
+        {ACTIONS.map((action) => (
           <button
-            className={`px-5 py-2 font-medium rounded-full border transition-all duration-200 cursor-pointer ${
+            className={`px-5 py-2 font-medium rounded-full border transition-all cursor-pointer ${
               filters.includes(action)
-                ? 'bg-gray-800 text-white shadow-lg scale-105'
+                ? 'bg-gray-800 text-white'
                 : 'bg-white text-gray-800 border-gray-300'
             }`}
             key={action}
@@ -97,33 +95,27 @@ export const List = () => {
       <div className="space-y-3">
         {filteredData.map((item) => (
           <div
-            className="grid items-center px-6 py-4 transition-all duration-200 bg-white border border-gray-100 shadow-sm cursor-pointer grid-cols-23 group rounded-xl hover:shadow-md hover:border-blue-200"
+            className="grid items-center px-6 py-4 transition bg-white border border-gray-100 shadow-sm cursor-pointer grid-cols-23 rounded-xl hover:border-blue-200 hover:shadow-md"
             key={item.hash}
           >
-            <div className="col-span-16">
-              <p className="font-mono text-sm text-blue-600 group-hover:text-blue-700">
-                {item.hash}
-              </p>
+            <div className="font-mono text-sm text-blue-600 col-span-16">
+              {item.hash}
             </div>
 
             <div className="flex justify-center col-span-3">
-              <p
-                className={`text-[12px] px-3 py-1 rounded-md font-medium ${
+              <span
+                className={`px-3 py-1 text-xs font-medium rounded-md ${
                   item.action === 'Đã tạo'
                     ? 'bg-green-50 text-green-700'
-                    : item.action === 'Đã thu hồi'
-                      ? 'bg-red-50 text-red-700'
-                      : 'bg-orange-50 text-orange-700'
+                    : 'bg-red-50 text-red-700'
                 }`}
               >
                 {item.action}
-              </p>
+              </span>
             </div>
 
-            <div className="col-span-4 text-right">
-              <p className="text-sm text-gray-600">
-                {new Date(item.timestamp * 1000).toLocaleString('vi-vn')}
-              </p>
+            <div className="col-span-4 text-sm text-right text-gray-600">
+              {new Date(item.timestamp * 1000).toLocaleString('vi-VN')}
             </div>
           </div>
         ))}
