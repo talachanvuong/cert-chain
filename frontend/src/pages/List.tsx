@@ -72,7 +72,7 @@ export const List = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto mt-10">
+    <div className="max-w-4xl mx-auto my-10">
       <div className="flex justify-center gap-4 mb-6">
         {ACTIONS.map((action) => (
           <button

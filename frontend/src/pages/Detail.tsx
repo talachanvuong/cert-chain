@@ -142,7 +142,7 @@ export const Detail = () => {
           </p>
           <div className="grid gap-6 md:grid-cols-3">
             <div className="p-4 rounded-lg bg-gray-50">
-              <p className="mb-2 text-sm text-gray-600">Tên học sinh</p>
+              <p className="mb-2 text-sm text-gray-600">Họ và tên</p>
               <p className="font-semibold text-gray-900">{cert.studentName}</p>
             </div>
             <div className="p-4 rounded-lg bg-gray-50">
