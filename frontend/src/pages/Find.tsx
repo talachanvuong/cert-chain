@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { isHex, type Hex } from 'viem'
 import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
@@ -24,6 +25,8 @@ const isCertHash = (value: string): value is Hex => {
 }
 
 export const Find = () => {
+  const navigate = useNavigate()
+
   const [activeTab, setActiveTab] = useState<'hash' | 'student'>('hash')
 
   const [certHash, setCertHash] = useState<string>('')
@@ -181,7 +184,10 @@ export const Find = () => {
           </div>
 
           <div className="pt-4 border-t border-gray-200">
-            <button className="w-full px-4 py-2 text-sm font-medium text-white transition-colors bg-gray-800 rounded cursor-pointer hover:bg-gray-900">
+            <button
+              className="w-full px-4 py-2 text-sm font-medium text-white transition-colors bg-gray-800 rounded cursor-pointer hover:bg-gray-900"
+              onClick={() => navigate(`/certificate/${result.hash}`)}
+            >
               Xem chi tiết
             </button>
           </div>
