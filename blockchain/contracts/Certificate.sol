@@ -27,6 +27,7 @@ contract Certificate {
         bytes32 indexed _certificateHash,
         CertificateAction _certificateAction
     );
+    event StudentReceived(string indexed _studentId, bytes32 _certificateHash);
 
     error NotOwner();
     error NotFound();
@@ -72,6 +73,7 @@ contract Certificate {
         });
 
         emit CertificateUpdated(certificateHash, CertificateAction.Issued);
+        emit StudentReceived(_studentId, certificateHash);
     }
 
     function revokeCertificate(bytes32 _certificateHash) external onlyOwner {
@@ -84,5 +86,17 @@ contract Certificate {
         certificate.revoked = true;
 
         emit CertificateUpdated(_certificateHash, CertificateAction.Revoked);
+    }
+
+    function verifyCertificate(
+        bytes32 _certificateHash
+    ) external view returns (CertificateInfo memory) {
+        CertificateInfo memory cert = certificates[_certificateHash];
+
+        if (cert.issuedAt == 0) {
+            revert NotFound();
+        }
+
+        return cert;
     }
 }

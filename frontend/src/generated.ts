@@ -26,6 +26,25 @@ export const certificateAbi = [
     name: 'CertificateUpdated',
   },
   {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: '_studentId',
+        internalType: 'string',
+        type: 'string',
+        indexed: true,
+      },
+      {
+        name: '_certificateHash',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: false,
+      },
+    ],
+    name: 'StudentReceived',
+  },
+  {
     type: 'function',
     inputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
     name: 'certificates',
@@ -70,5 +89,31 @@ export const certificateAbi = [
     name: 'revokeCertificate',
     outputs: [],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_certificateHash', internalType: 'bytes32', type: 'bytes32' },
+    ],
+    name: 'verifyCertificate',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct Certificate.CertificateInfo',
+        type: 'tuple',
+        components: [
+          { name: 'certificateHash', internalType: 'bytes32', type: 'bytes32' },
+          { name: 'certificateName', internalType: 'string', type: 'string' },
+          { name: 'classification', internalType: 'string', type: 'string' },
+          { name: 'issuer', internalType: 'address', type: 'address' },
+          { name: 'issuedAt', internalType: 'uint256', type: 'uint256' },
+          { name: 'revoked', internalType: 'bool', type: 'bool' },
+          { name: 'studentId', internalType: 'string', type: 'string' },
+          { name: 'studentName', internalType: 'string', type: 'string' },
+          { name: 'dateOfBirth', internalType: 'uint256', type: 'uint256' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
   },
 ] as const
