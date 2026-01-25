@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { Certificate } from '../pages/Certificate'
 import { Create } from '../pages/Create'
 import { Dashboard } from '../pages/Dashboard'
 import { Detail } from '../pages/Detail'
@@ -22,6 +23,7 @@ export const AppRoutes = () => (
     </Route>
 
     <Route path="/find" element={<Find />} />
+    <Route path="/certificate/:hash" element={<Certificate />} />
 
     <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
   </Routes>
