@@ -5,13 +5,15 @@ contract Certificate {
     enum CertificateAction {
         Issued,
         Approved,
-        Revoked
+        Revoked,
+        Rejected
     }
 
     enum CertificateStatus {
         Pending,
         Verified,
-        Revoked
+        Revoked,
+        Rejected
     }
 
     struct CertificateInfo {
@@ -96,7 +98,10 @@ contract Certificate {
             revert NotFound();
         }
 
-        if (certificate.status == CertificateStatus.Revoked) {
+        if (
+            certificate.status == CertificateStatus.Revoked ||
+            certificate.status == CertificateStatus.Rejected
+        ) {
             revert InvalidStatus();
         }
 
@@ -125,6 +130,28 @@ contract Certificate {
         certificate.verifiedAt = block.timestamp;
 
         emit CertificateUpdated(_certificateHash, CertificateAction.Approved);
+    }
+
+    function rejectCertificate(bytes32 _certificateHash) external {
+        if (msg.sender == owner) {
+            revert OwnerCannotVerify();
+        }
+
+        CertificateInfo storage certificate = certificates[_certificateHash];
+
+        if (certificate.issuedAt == 0) {
+            revert NotFound();
+        }
+
+        if (certificate.status != CertificateStatus.Pending) {
+            revert InvalidStatus();
+        }
+
+        certificate.status = CertificateStatus.Rejected;
+        certificate.verifier = msg.sender;
+        certificate.verifiedAt = block.timestamp;
+
+        emit CertificateUpdated(_certificateHash, CertificateAction.Rejected);
     }
 
     function getCertificate(

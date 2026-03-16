@@ -7,7 +7,7 @@ import { certificate } from '../config/contract'
 import { useAuth } from '../hooks/useAuth'
 
 type Classification = 'Xuất sắc' | 'Giỏi' | 'Khá'
-type Status = 'Pending' | 'Verified' | 'Revoked'
+type Status = 'Pending' | 'Verified' | 'Revoked' | 'Rejected'
 
 interface CertificateData {
   hash: Address
@@ -40,18 +40,21 @@ const STATUS_MAP: Record<number, Status> = {
   0: 'Pending',
   1: 'Verified',
   2: 'Revoked',
+  3: 'Rejected',
 }
 
 const STATUS_COLORS: Record<Status, string> = {
   Pending: 'bg-yellow-500',
   Verified: 'bg-green-500',
   Revoked: 'bg-red-500',
+  Rejected: 'bg-orange-500',
 }
 
 const STATUS_LABELS: Record<Status, string> = {
   Pending: 'Chờ xác thực',
   Verified: 'Đã xác thực',
   Revoked: 'Đã thu hồi',
+  Rejected: 'Bị từ chối',
 }
 
 const formatDate = (timestamp: number) =>
@@ -85,7 +88,7 @@ export const Detail = () => {
             { _certificateHash: hash },
             { fromBlock: 0n, toBlock: 'latest' }
           )
-        ).filter((e) => e.args._certificateAction === 2) // Revoked
+        ).filter((e) => e.args._certificateAction === 2)
 
         if (events.length > 0) {
           const block = await publicClient.getBlock({
@@ -231,21 +234,68 @@ export const Detail = () => {
             </p>
           </div>
 
-          {/* Hiển thị thông tin xác thực nếu đã từng được xác thực */}
+          {/* Hiển thị thông tin xác thực nếu đã từng được xác thực hoặc từ chối */}
           {cert.verifiedAt > 0 && (
-            <div className="p-4 mb-4 border-2 border-green-300 rounded-lg bg-green-50">
-              <p className="mb-3 text-sm font-semibold text-green-700">
-                Thông tin xác thực
+            <div
+              className={`p-4 mb-4 border-2 rounded-lg ${
+                cert.status === 'Rejected' ||
+                (cert.status === 'Revoked' && cert.verifier)
+                  ? 'border-orange-300 bg-orange-50'
+                  : 'border-green-300 bg-green-50'
+              }`}
+            >
+              <p
+                className={`mb-3 text-sm font-semibold ${
+                  cert.status === 'Rejected'
+                    ? 'text-orange-700'
+                    : 'text-green-700'
+                }`}
+              >
+                {cert.status === 'Rejected'
+                  ? 'Thông tin từ chối'
+                  : 'Thông tin xác thực'}
               </p>
               <div className="mb-3">
-                <p className="mb-1 text-xs text-green-600">Người xác thực</p>
-                <div className="p-2 overflow-x-auto font-mono text-sm text-green-800 bg-white border border-green-200 rounded">
+                <p
+                  className={`mb-1 text-xs ${
+                    cert.status === 'Rejected'
+                      ? 'text-orange-600'
+                      : 'text-green-600'
+                  }`}
+                >
+                  {cert.status === 'Rejected'
+                    ? 'Người từ chối'
+                    : 'Người xác thực'}
+                </p>
+                <div
+                  className={`p-2 overflow-x-auto font-mono text-sm bg-white border rounded ${
+                    cert.status === 'Rejected'
+                      ? 'text-orange-800 border-orange-200'
+                      : 'text-green-800 border-green-200'
+                  }`}
+                >
                   {cert.verifier}
                 </div>
               </div>
               <div>
-                <p className="mb-1 text-xs text-green-600">Ngày xác thực</p>
-                <p className="text-sm font-semibold text-green-800">
+                <p
+                  className={`mb-1 text-xs ${
+                    cert.status === 'Rejected'
+                      ? 'text-orange-600'
+                      : 'text-green-600'
+                  }`}
+                >
+                  {cert.status === 'Rejected'
+                    ? 'Ngày từ chối'
+                    : 'Ngày xác thực'}
+                </p>
+                <p
+                  className={`text-sm font-semibold ${
+                    cert.status === 'Rejected'
+                      ? 'text-orange-800'
+                      : 'text-green-800'
+                  }`}
+                >
                   {formatDateTime(cert.verifiedAt)}
                 </p>
               </div>
@@ -262,8 +312,8 @@ export const Detail = () => {
           )}
         </div>
 
-        {/* Revoke button — chỉ hiện khi Pending hoặc Verified */}
-        {cert.status !== 'Revoked' && (
+        {/* Nút thu hồi — chỉ hiện khi Pending hoặc Verified */}
+        {cert.status !== 'Revoked' && cert.status !== 'Rejected' && (
           <>
             <div className="my-8 border-t border-gray-200" />
             <div className="flex justify-end">

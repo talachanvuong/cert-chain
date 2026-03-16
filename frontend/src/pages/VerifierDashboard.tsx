@@ -42,6 +42,7 @@ export const VerifierDashboard = () => {
   const [certs, setCerts] = useState<PendingCert[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [approvingHash, setApprovingHash] = useState<Address | null>(null)
+  const [rejectingHash, setRejectingHash] = useState<Address | null>(null)
 
   const fetchPendingCerts = async () => {
     setLoading(true)
@@ -88,7 +89,7 @@ export const VerifierDashboard = () => {
   }, [])
 
   const handleApprove = async (hash: Address) => {
-    if (approvingHash) return
+    if (approvingHash || rejectingHash) return
 
     setApprovingHash(hash)
 
@@ -107,6 +108,30 @@ export const VerifierDashboard = () => {
       setApprovingHash(null)
     }
   }
+
+  const handleReject = async (hash: Address) => {
+    if (approvingHash || rejectingHash) return
+    if (!window.confirm('Bạn có chắc chắn muốn từ chối chứng chỉ này?')) return
+
+    setRejectingHash(hash)
+
+    try {
+      const txHash = await certificate.write.rejectCertificate([hash], {
+        account: address,
+      })
+
+      await publicClient.waitForTransactionReceipt({ hash: txHash })
+
+      toast.success('Đã từ chối chứng chỉ')
+      setCerts((prev) => prev.filter((c) => c.hash !== hash))
+    } catch {
+      toast.error('Giao dịch thất bại')
+    } finally {
+      setRejectingHash(null)
+    }
+  }
+
+  const isBusy = !!approvingHash || !!rejectingHash
 
   return (
     <div className="max-w-4xl mx-auto my-10 px-4">
@@ -148,7 +173,7 @@ export const VerifierDashboard = () => {
                     {cert.classification}
                   </span>
                 </div>
-                <span className="px-3 py-1 text-xs font-bold tracking-wide text-yellow-800 bg-yellow-100 rounded-full uppercase">
+                <span className="px-3 py-1 text-xs font-bold tracking-wide text-yellow-800 bg-yellow-100 rounded-full">
                   Chờ xác thực
                 </span>
               </div>
@@ -205,13 +230,26 @@ export const VerifierDashboard = () => {
                   <p className="text-sm text-gray-400">
                     Ngày cấp: {formatDateTime(cert.issuedAt)}
                   </p>
-                  <button
-                    onClick={() => handleApprove(cert.hash)}
-                    disabled={approvingHash === cert.hash}
-                    className="px-6 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {approvingHash === cert.hash ? 'Đang xử lý...' : 'Xác thực'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleReject(cert.hash)}
+                      disabled={isBusy}
+                      className="px-5 py-2 text-sm font-semibold text-white bg-red-500 rounded-lg cursor-pointer hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {rejectingHash === cert.hash
+                        ? 'Đang xử lý...'
+                        : 'Từ chối'}
+                    </button>
+                    <button
+                      onClick={() => handleApprove(cert.hash)}
+                      disabled={isBusy}
+                      className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {approvingHash === cert.hash
+                        ? 'Đang xử lý...'
+                        : 'Xác thực'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

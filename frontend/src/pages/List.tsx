@@ -4,7 +4,7 @@ import type { Address } from 'viem'
 import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 
-type CertificateAction = 'Đã tạo' | 'Đã xác thực' | 'Đã thu hồi'
+type CertificateAction = 'Đã tạo' | 'Đã xác thực' | 'Đã thu hồi' | 'Bị từ chối'
 
 interface CertificateEvent {
   hash: Address
@@ -12,20 +12,27 @@ interface CertificateEvent {
   timestamp: number
 }
 
-// CertificateAction enum: Issued=0, Approved=1, Revoked=2
+// CertificateAction enum: Issued=0, Approved=1, Revoked=2, Rejected=3
 const ACTION_MAP: Record<number, CertificateAction> = {
   0: 'Đã tạo',
   1: 'Đã xác thực',
   2: 'Đã thu hồi',
+  3: 'Bị từ chối',
 }
 
 const ACTION_STYLES: Record<CertificateAction, string> = {
   'Đã tạo': 'bg-yellow-50 text-yellow-700',
   'Đã xác thực': 'bg-green-50 text-green-700',
   'Đã thu hồi': 'bg-red-50 text-red-700',
+  'Bị từ chối': 'bg-orange-50 text-orange-700',
 }
 
-const ACTIONS: CertificateAction[] = ['Đã tạo', 'Đã xác thực', 'Đã thu hồi']
+const ACTIONS: CertificateAction[] = [
+  'Đã tạo',
+  'Đã xác thực',
+  'Đã thu hồi',
+  'Bị từ chối',
+]
 
 export const List = () => {
   const navigate = useNavigate()
@@ -46,7 +53,7 @@ export const List = () => {
         const { _certificateHash, _certificateAction } = event.args
 
         if (!_certificateHash || _certificateAction === undefined) continue
-        if (!ACTION_MAP[_certificateAction]) continue
+        if (ACTION_MAP[_certificateAction] === undefined) continue
 
         const block = await publicClient.getBlock({
           blockNumber: event.blockNumber,

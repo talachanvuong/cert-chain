@@ -6,7 +6,7 @@ import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 
 type Classification = 'Xuất sắc' | 'Giỏi' | 'Khá'
-type Status = 'Pending' | 'Verified' | 'Revoked'
+type Status = 'Pending' | 'Verified' | 'Revoked' | 'Rejected'
 
 interface CertificateData {
   hash: Address
@@ -33,6 +33,7 @@ const STATUS_MAP: Record<number, Status> = {
   0: 'Pending',
   1: 'Verified',
   2: 'Revoked',
+  3: 'Rejected',
 }
 
 const formatDate = (timestamp: number) =>
@@ -167,16 +168,42 @@ export const Certificate = () => {
               </div>
             </div>
 
-            {/* Verifier info - hiển thị nếu đã từng được xác thực */}
+            {/* Thông tin xác thực — hiển thị nếu đã từng được xác thực hoặc từ chối */}
             {cert.verifiedAt > 0 && (
-              <div className="p-4 border border-green-200 rounded-lg bg-green-50">
-                <p className="mb-1 text-xs font-bold text-green-600 uppercase">
-                  Đã xác thực bởi
+              <div
+                className={`p-4 border rounded-lg ${
+                  cert.status === 'Rejected'
+                    ? 'border-orange-200 bg-orange-50'
+                    : 'border-green-200 bg-green-50'
+                }`}
+              >
+                <p
+                  className={`mb-1 text-xs font-bold uppercase ${
+                    cert.status === 'Rejected'
+                      ? 'text-orange-600'
+                      : 'text-green-600'
+                  }`}
+                >
+                  {cert.status === 'Rejected'
+                    ? 'Bị từ chối bởi'
+                    : 'Đã xác thực bởi'}
                 </p>
-                <p className="font-mono text-xs text-green-800 break-all">
+                <p
+                  className={`font-mono text-xs break-all ${
+                    cert.status === 'Rejected'
+                      ? 'text-orange-800'
+                      : 'text-green-800'
+                  }`}
+                >
                   {cert.verifier}
                 </p>
-                <p className="mt-1 text-xs text-green-600">
+                <p
+                  className={`mt-1 text-xs ${
+                    cert.status === 'Rejected'
+                      ? 'text-orange-600'
+                      : 'text-green-600'
+                  }`}
+                >
                   {formatDateLong(cert.verifiedAt)}
                 </p>
               </div>
@@ -205,6 +232,12 @@ export const Certificate = () => {
                   {formatDateLong(cert.revokedAt)}
                 </p>
               )}
+            </div>
+          ) : cert.status === 'Rejected' ? (
+            <div className="p-4 mb-6 text-center bg-orange-100 border border-orange-200 rounded-lg">
+              <p className="text-sm font-bold text-orange-700 uppercase">
+                Bị từ chối
+              </p>
             </div>
           ) : cert.status === 'Pending' ? (
             <div className="p-4 mb-6 text-center bg-yellow-100 border border-yellow-200 rounded-lg">

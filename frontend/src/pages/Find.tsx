@@ -4,7 +4,7 @@ import { isHex, type Hex } from 'viem'
 import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 
-type CertificateStatus = 'Pending' | 'Verified' | 'Revoked'
+type CertificateStatus = 'Pending' | 'Verified' | 'Revoked' | 'Rejected'
 
 interface CertificateResult {
   hash: Hex
@@ -16,6 +16,7 @@ const STATUS_MAP: Record<number, CertificateStatus> = {
   0: 'Pending',
   1: 'Verified',
   2: 'Revoked',
+  3: 'Rejected',
 }
 
 const STATUS_STYLES: Record<
@@ -42,6 +43,13 @@ const STATUS_STYLES: Record<
     dot: 'bg-red-600',
     label: 'text-red-900',
     text: 'Đã thu hồi',
+  },
+  Rejected: {
+    card: 'bg-orange-50 border-orange-200',
+    badge: 'bg-orange-200 text-orange-900',
+    dot: 'bg-orange-500',
+    label: 'text-orange-900',
+    text: 'Bị từ chối',
   },
 }
 

@@ -135,6 +135,15 @@ export const certificateAbi = [
     inputs: [
       { name: '_certificateHash', internalType: 'bytes32', type: 'bytes32' },
     ],
+    name: 'rejectCertificate',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_certificateHash', internalType: 'bytes32', type: 'bytes32' },
+    ],
     name: 'revokeCertificate',
     outputs: [],
     stateMutability: 'nonpayable',
