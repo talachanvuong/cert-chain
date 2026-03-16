@@ -1,41 +1,33 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { isAddress, zeroAddress, type Address } from 'viem'
 import { certificate } from '../../config/contract'
-import { AuthContext } from './AuthContext'
+import { AuthContext, type UserRole } from './AuthContext'
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [address, setAddress] = useState<Address>(zeroAddress)
-  const [isOwner, setIsOwner] = useState<boolean>(false)
+  const [role, setRole] = useState<UserRole>('guest')
 
   useEffect(() => {
     const savedAddress = sessionStorage.getItem('address')
 
-    if (!savedAddress) {
-      return
-    }
-
-    if (!isAddress(savedAddress)) {
-      return
-    }
-
-    if (savedAddress === zeroAddress) {
-      return
-    }
+    if (!savedAddress || !isAddress(savedAddress)) return
+    if (savedAddress === zeroAddress) return
 
     setAddress(savedAddress)
   }, [])
 
   useEffect(() => {
     if (address === zeroAddress) {
+      setRole('guest')
       return
     }
 
-    const checkOwner = async () => {
+    const deriveRole = async () => {
       const owner = await certificate.read.owner()
-      setIsOwner(address === owner)
+      setRole(address === owner ? 'owner' : 'verifier')
     }
 
-    checkOwner()
+    deriveRole()
   }, [address])
 
   const login = (address: Address) => {
@@ -45,19 +37,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setAddress(zeroAddress)
-    setIsOwner(false)
+    setRole('guest')
     sessionStorage.removeItem('address')
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        address,
-        isOwner,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ address, role, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

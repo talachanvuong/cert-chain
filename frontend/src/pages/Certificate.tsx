@@ -6,6 +6,7 @@ import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 
 type Classification = 'Xuất sắc' | 'Giỏi' | 'Khá'
+type Status = 'Pending' | 'Verified' | 'Revoked'
 
 interface CertificateData {
   hash: Address
@@ -13,7 +14,9 @@ interface CertificateData {
   classification: Classification
   issuer: Address
   issuedAt: number
-  revoked: boolean
+  status: Status
+  verifier: Address
+  verifiedAt: number
   revokedAt?: number
   studentId: string
   studentName: string
@@ -24,6 +27,12 @@ const CLASSIFICATION_MAP: Record<string, Classification> = {
   excellent: 'Xuất sắc',
   veryGood: 'Giỏi',
   good: 'Khá',
+}
+
+const STATUS_MAP: Record<number, Status> = {
+  0: 'Pending',
+  1: 'Verified',
+  2: 'Revoked',
 }
 
 const formatDate = (timestamp: number) =>
@@ -51,32 +60,22 @@ export const Certificate = () => {
     }
 
     const loadCertificate = async () => {
-      const data = await certificate.read.verifyCertificate([hash])
+      const data = await certificate.read.getCertificate([hash])
 
-      const issuedAt = Number(data.issuedAt)
-
-      if (!issuedAt) {
-        setCert(null)
-        return
-      }
-
-      const revoked = data.revoked
+      const status = STATUS_MAP[data.status]
       let revokedAt: number | undefined
 
-      if (revoked) {
-        const events = await certificate.getEvents.CertificateUpdated(
-          { _certificateHash: hash },
-          { fromBlock: 0n, toBlock: 'latest' }
-        )
+      if (status === 'Revoked') {
+        const events = (
+          await certificate.getEvents.CertificateUpdated(
+            { _certificateHash: hash },
+            { fromBlock: 0n, toBlock: 'latest' }
+          )
+        ).filter((e) => e.args._certificateAction === 2)
 
-        const revokedEvent = events.find((event) => {
-          const action = event.args._certificateAction
-          return action === 1
-        })
-
-        if (revokedEvent) {
+        if (events.length > 0) {
           const block = await publicClient.getBlock({
-            blockNumber: revokedEvent.blockNumber,
+            blockNumber: events[0].blockNumber,
           })
           revokedAt = Number(block.timestamp)
         }
@@ -87,8 +86,10 @@ export const Certificate = () => {
         name: data.certificateName,
         classification: CLASSIFICATION_MAP[data.classification],
         issuer: data.issuer,
-        issuedAt,
-        revoked,
+        issuedAt: Number(data.issuedAt),
+        status,
+        verifier: data.verifier,
+        verifiedAt: Number(data.verifiedAt),
         revokedAt,
         studentId: data.studentId,
         studentName: data.studentName,
@@ -121,22 +122,21 @@ export const Certificate = () => {
   return (
     <div className="flex items-center justify-center w-full h-screen p-4 bg-gray-100">
       <div className="flex w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh]">
+        {/* Left */}
         <div className="relative flex flex-col flex-1 p-8 md:p-12">
-          <div className="absolute top-0 left-0 w-full h-2 bg-linear-to-r from-blue-900 to-amber-500"></div>
+          <div className="absolute top-0 left-0 w-full h-2 bg-linear-to-r from-blue-900 to-amber-500" />
 
           <div className="mb-8">
             <p className="text-4xl font-extrabold tracking-tight text-blue-900 uppercase">
               Vinh danh thành tích
             </p>
-            <div className="w-24 h-1 mt-3 bg-linear-to-r from-blue-900 to-amber-500"></div>
+            <div className="w-24 h-1 mt-3 bg-linear-to-r from-blue-900 to-amber-500" />
           </div>
 
           <div className="flex flex-col justify-center flex-1 space-y-8">
-            <div>
-              <p className="text-3xl font-bold leading-tight text-gray-900 md:text-4xl">
-                {cert.studentName}
-              </p>
-            </div>
+            <p className="text-3xl font-bold leading-tight text-gray-900 md:text-4xl">
+              {cert.studentName}
+            </p>
 
             <div className="grid grid-cols-2 gap-6">
               <div className="flex flex-col">
@@ -166,34 +166,56 @@ export const Certificate = () => {
                 Xếp loại: {cert.classification}
               </div>
             </div>
+
+            {/* Verifier info - hiển thị nếu đã từng được xác thực */}
+            {cert.verifiedAt > 0 && (
+              <div className="p-4 border border-green-200 rounded-lg bg-green-50">
+                <p className="mb-1 text-xs font-bold text-green-600 uppercase">
+                  Đã xác thực bởi
+                </p>
+                <p className="font-mono text-xs text-green-800 break-all">
+                  {cert.verifier}
+                </p>
+                <p className="mt-1 text-xs text-green-600">
+                  {formatDateLong(cert.verifiedAt)}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="pt-6 mt-6 border-t border-gray-200">
             <p className="mb-2 text-xs font-bold text-gray-400 uppercase">
               Mã chứng chỉ
             </p>
-            <div className="overflow-x-auto">
-              <p className="font-mono text-xs text-gray-600 whitespace-nowrap">
-                {cert.hash}
-              </p>
-            </div>
+            <p className="font-mono text-xs text-gray-600 whitespace-nowrap overflow-x-auto">
+              {cert.hash}
+            </p>
           </div>
         </div>
 
+        {/* Right */}
         <div className="relative flex flex-col justify-between p-8 border-l border-gray-200 w-80 bg-gray-50">
-          {cert.revoked ? (
+          {cert.status === 'Revoked' ? (
             <div className="p-4 mb-6 text-center bg-red-100 border border-red-200 rounded-lg">
               <p className="text-sm font-bold text-red-700 uppercase">
                 Đã thu hồi
               </p>
-              <p className="mt-1 text-xs text-red-600">
-                {formatDateLong(cert.issuedAt)}
+              {cert.revokedAt && (
+                <p className="mt-1 text-xs text-red-600">
+                  {formatDateLong(cert.revokedAt)}
+                </p>
+              )}
+            </div>
+          ) : cert.status === 'Pending' ? (
+            <div className="p-4 mb-6 text-center bg-yellow-100 border border-yellow-200 rounded-lg">
+              <p className="text-xs font-bold tracking-wide text-yellow-700 uppercase">
+                Chờ xác thực
               </p>
             </div>
           ) : (
-            <div className="p-2 mb-6 text-center bg-green-100 border border-green-200 rounded">
+            <div className="p-4 mb-6 text-center bg-green-100 border border-green-200 rounded-lg">
               <p className="text-xs font-bold tracking-wide text-green-700 uppercase">
-                Đang hiệu lực
+                Đã xác thực
               </p>
             </div>
           )}

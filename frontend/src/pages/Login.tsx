@@ -1,20 +1,17 @@
 import { toast } from 'react-toastify'
 import { walletClient } from '../config/client'
-import { certificate } from '../config/contract'
 import { useAuth } from '../hooks/useAuth'
 
 export const Login = () => {
   const { login } = useAuth()
 
   const handleLogin = async () => {
-    const [account] = await walletClient.requestAddresses()
-    const owner = await certificate.read.owner()
-
-    if (account === owner) {
-      toast.success('Đăng nhập thành công')
+    try {
+      const [account] = await walletClient.requestAddresses()
       login(account)
-    } else {
-      toast.error('Bạn không phải chủ sở hữu')
+      toast.success('Đăng nhập thành công')
+    } catch {
+      toast.error('Đăng nhập thất bại')
     }
   }
 

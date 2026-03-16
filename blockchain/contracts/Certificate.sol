@@ -4,6 +4,13 @@ pragma solidity ^0.8.28;
 contract Certificate {
     enum CertificateAction {
         Issued,
+        Approved,
+        Revoked
+    }
+
+    enum CertificateStatus {
+        Pending,
+        Verified,
         Revoked
     }
 
@@ -13,7 +20,9 @@ contract Certificate {
         string classification;
         address issuer;
         uint issuedAt;
-        bool revoked;
+        CertificateStatus status;
+        address verifier;
+        uint verifiedAt;
         string studentId;
         string studentName;
         uint dateOfBirth;
@@ -31,6 +40,8 @@ contract Certificate {
 
     error NotOwner();
     error NotFound();
+    error InvalidStatus();
+    error OwnerCannotVerify();
 
     modifier onlyOwner() {
         if (msg.sender != owner) {
@@ -66,7 +77,9 @@ contract Certificate {
             classification: _classification,
             issuer: msg.sender,
             issuedAt: block.timestamp,
-            revoked: false,
+            status: CertificateStatus.Pending,
+            verifier: address(0),
+            verifiedAt: 0,
             studentId: _studentId,
             studentName: _studentName,
             dateOfBirth: _dateOfBirth
@@ -83,20 +96,46 @@ contract Certificate {
             revert NotFound();
         }
 
-        certificate.revoked = true;
+        if (certificate.status == CertificateStatus.Revoked) {
+            revert InvalidStatus();
+        }
+
+        certificate.status = CertificateStatus.Revoked;
 
         emit CertificateUpdated(_certificateHash, CertificateAction.Revoked);
     }
 
-    function verifyCertificate(
-        bytes32 _certificateHash
-    ) external view returns (CertificateInfo memory) {
-        CertificateInfo memory cert = certificates[_certificateHash];
+    function approveCertificate(bytes32 _certificateHash) external {
+        if (msg.sender == owner) {
+            revert OwnerCannotVerify();
+        }
 
-        if (cert.issuedAt == 0) {
+        CertificateInfo storage certificate = certificates[_certificateHash];
+
+        if (certificate.issuedAt == 0) {
             revert NotFound();
         }
 
-        return cert;
+        if (certificate.status != CertificateStatus.Pending) {
+            revert InvalidStatus();
+        }
+
+        certificate.status = CertificateStatus.Verified;
+        certificate.verifier = msg.sender;
+        certificate.verifiedAt = block.timestamp;
+
+        emit CertificateUpdated(_certificateHash, CertificateAction.Approved);
+    }
+
+    function getCertificate(
+        bytes32 _certificateHash
+    ) external view returns (CertificateInfo memory) {
+        CertificateInfo memory certificate = certificates[_certificateHash];
+
+        if (certificate.issuedAt == 0) {
+            revert NotFound();
+        }
+
+        return certificate;
     }
 }

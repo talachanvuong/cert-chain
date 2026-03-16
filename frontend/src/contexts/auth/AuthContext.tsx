@@ -1,9 +1,11 @@
 import { createContext } from 'react'
 import type { Address } from 'viem'
 
+export type UserRole = 'owner' | 'verifier' | 'guest'
+
 interface ProviderProps {
   address: Address
-  isOwner: boolean
+  role: UserRole
   login: (address: Address) => void
   logout: () => void
 }

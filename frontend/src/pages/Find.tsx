@@ -4,17 +4,45 @@ import { isHex, type Hex } from 'viem'
 import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 
-type CertificateAction = 'Đã tạo' | 'Đã thu hồi'
+type CertificateStatus = 'Pending' | 'Verified' | 'Revoked'
 
 interface CertificateResult {
   hash: Hex
-  action: CertificateAction
+  status: CertificateStatus
   issuedAt: number
 }
 
-const ACTION_MAP: Record<number, CertificateAction> = {
-  0: 'Đã tạo',
-  1: 'Đã thu hồi',
+const STATUS_MAP: Record<number, CertificateStatus> = {
+  0: 'Pending',
+  1: 'Verified',
+  2: 'Revoked',
+}
+
+const STATUS_STYLES: Record<
+  CertificateStatus,
+  { card: string; badge: string; dot: string; label: string; text: string }
+> = {
+  Pending: {
+    card: 'bg-yellow-50 border-yellow-200',
+    badge: 'bg-yellow-200 text-yellow-900',
+    dot: 'bg-yellow-500',
+    label: 'text-yellow-900',
+    text: 'Chờ xác thực',
+  },
+  Verified: {
+    card: 'bg-green-50 border-green-200',
+    badge: 'bg-green-200 text-green-900',
+    dot: 'bg-green-600',
+    label: 'text-green-900',
+    text: 'Đã xác thực',
+  },
+  Revoked: {
+    card: 'bg-red-50 border-red-200',
+    badge: 'bg-red-200 text-red-900',
+    dot: 'bg-red-600',
+    label: 'text-red-900',
+    text: 'Đã thu hồi',
+  },
 }
 
 const formatDateTime = (timestamp: number) =>
@@ -52,36 +80,28 @@ export const Find = () => {
       return
     }
 
-    const events = await certificate.getEvents.CertificateUpdated(
-      { _certificateHash: certHash },
-      { fromBlock: 0n, toBlock: 'latest' }
-    )
+    const events = (
+      await certificate.getEvents.CertificateUpdated(
+        { _certificateHash: certHash },
+        { fromBlock: 0n, toBlock: 'latest' }
+      )
+    ).filter((e) => e.args._certificateAction === 0) // Issued only
 
     if (events.length === 0) {
       setCertError('Không tìm thấy chứng chỉ')
       return
     }
 
-    const issuedEvent = events.find(
-      (e) => ACTION_MAP[e.args._certificateAction!] === 'Đã tạo'
-    )
-    const revokedEvent = events.find(
-      (e) => ACTION_MAP[e.args._certificateAction!] === 'Đã thu hồi'
-    )
+    const data = await certificate.read.getCertificate([certHash])
 
-    if (!issuedEvent) {
-      setCertError('Không tìm thấy chứng chỉ')
-      return
-    }
-
-    const issuedBlock = await publicClient.getBlock({
-      blockNumber: issuedEvent.blockNumber,
+    const block = await publicClient.getBlock({
+      blockNumber: events[0].blockNumber,
     })
 
     setCertResult({
-      hash: issuedEvent.args._certificateHash!,
-      action: revokedEvent ? 'Đã thu hồi' : 'Đã tạo',
-      issuedAt: Number(issuedBlock.timestamp),
+      hash: certHash,
+      status: STATUS_MAP[data.status],
+      issuedAt: Number(block.timestamp),
     })
   }
 
@@ -107,30 +127,29 @@ export const Find = () => {
     const results: CertificateResult[] = []
 
     for (const event of events) {
-      const certHash = event.args._certificateHash!
+      const hash = event.args._certificateHash!
 
-      const certEvents = await certificate.getEvents.CertificateUpdated(
-        { _certificateHash: certHash },
-        { fromBlock: 0n, toBlock: 'latest' }
-      )
+      const [data, issuedEvents] = await Promise.all([
+        certificate.read.getCertificate([hash]),
+        certificate.getEvents.CertificateUpdated(
+          { _certificateHash: hash },
+          { fromBlock: 0n, toBlock: 'latest' }
+        ),
+      ])
 
-      const issuedEvent = certEvents.find(
-        (e) => ACTION_MAP[e.args._certificateAction!] === 'Đã tạo'
+      const issuedEvent = issuedEvents.find(
+        (e) => e.args._certificateAction === 0
       )
-      const revokedEvent = certEvents.find(
-        (e) => ACTION_MAP[e.args._certificateAction!] === 'Đã thu hồi'
-      )
-
       if (!issuedEvent) continue
 
-      const issuedBlock = await publicClient.getBlock({
+      const block = await publicClient.getBlock({
         blockNumber: issuedEvent.blockNumber,
       })
 
       results.push({
-        hash: certHash,
-        action: revokedEvent ? 'Đã thu hồi' : 'Đã tạo',
-        issuedAt: Number(issuedBlock.timestamp),
+        hash,
+        status: STATUS_MAP[data.status],
+        issuedAt: Number(block.timestamp),
       })
     }
 
@@ -138,28 +157,20 @@ export const Find = () => {
   }
 
   const CertificateCard = ({ result }: { result: CertificateResult }) => {
-    const isRevoked = result.action === 'Đã thu hồi'
+    const styles = STATUS_STYLES[result.status]
 
     return (
       <div className="overflow-hidden transition-shadow bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md">
-        <div
-          className={`px-6 py-4 border-b ${isRevoked ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}
-        >
+        <div className={`px-6 py-4 border-b ${styles.card}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div
-                className={`w-2 h-2 rounded-full ${isRevoked ? 'bg-red-600' : 'bg-green-600'}`}
-              ></div>
-              <p
-                className={`font-semibold ${isRevoked ? 'text-red-900' : 'text-green-900'}`}
-              >
-                {isRevoked ? 'Đã thu hồi' : 'Hợp lệ'}
-              </p>
+              <div className={`w-2 h-2 rounded-full ${styles.dot}`} />
+              <p className={`font-semibold ${styles.label}`}>{styles.text}</p>
             </div>
             <p
-              className={`px-3 py-1 text-xs font-medium rounded ${isRevoked ? 'bg-red-200 text-red-900' : 'bg-green-200 text-green-900'}`}
+              className={`px-3 py-1 text-xs font-medium rounded ${styles.badge}`}
             >
-              {isRevoked ? 'THU HỒI' : 'HỢP LỆ'}
+              {styles.text.toUpperCase()}
             </p>
           </div>
         </div>

@@ -4,7 +4,7 @@ import type { Address } from 'viem'
 import { publicClient } from '../config/client'
 import { certificate } from '../config/contract'
 
-type CertificateAction = 'Đã tạo' | 'Đã thu hồi'
+type CertificateAction = 'Đã tạo' | 'Đã xác thực' | 'Đã thu hồi'
 
 interface CertificateEvent {
   hash: Address
@@ -12,12 +12,20 @@ interface CertificateEvent {
   timestamp: number
 }
 
-const ACTIONS: CertificateAction[] = ['Đã tạo', 'Đã thu hồi']
-
+// CertificateAction enum: Issued=0, Approved=1, Revoked=2
 const ACTION_MAP: Record<number, CertificateAction> = {
   0: 'Đã tạo',
-  1: 'Đã thu hồi',
+  1: 'Đã xác thực',
+  2: 'Đã thu hồi',
 }
+
+const ACTION_STYLES: Record<CertificateAction, string> = {
+  'Đã tạo': 'bg-yellow-50 text-yellow-700',
+  'Đã xác thực': 'bg-green-50 text-green-700',
+  'Đã thu hồi': 'bg-red-50 text-red-700',
+}
+
+const ACTIONS: CertificateAction[] = ['Đã tạo', 'Đã xác thực', 'Đã thu hồi']
 
 export const List = () => {
   const navigate = useNavigate()
@@ -76,12 +84,12 @@ export const List = () => {
       <div className="flex justify-center gap-4 mb-6">
         {ACTIONS.map((action) => (
           <button
+            key={action}
             className={`px-5 py-2 font-medium rounded-full border transition-all cursor-pointer ${
               filters.includes(action)
                 ? 'bg-gray-800 text-white'
                 : 'bg-white text-gray-800 border-gray-300'
             }`}
-            key={action}
             onClick={() => toggleFilter(action)}
           >
             {action}
@@ -92,14 +100,14 @@ export const List = () => {
       <div className="grid px-6 py-3 text-xs font-semibold tracking-wider text-gray-400 uppercase grid-cols-23">
         <div className="col-span-16">Mã chứng chỉ</div>
         <div className="col-span-3 text-center">Trạng thái</div>
-        <div className="col-span-4 text-right">Ngày tạo</div>
+        <div className="col-span-4 text-right">Thời gian</div>
       </div>
 
       <div className="space-y-3">
         {filteredData.map((item) => (
           <div
-            className="grid items-center px-6 py-4 transition bg-white border border-gray-100 shadow-sm cursor-pointer grid-cols-23 rounded-xl hover:border-blue-200 hover:shadow-md"
             key={`${item.hash}-${item.timestamp}`}
+            className="grid items-center px-6 py-4 transition bg-white border border-gray-100 shadow-sm cursor-pointer grid-cols-23 rounded-xl hover:border-blue-200 hover:shadow-md"
             onClick={() => navigate(`/admin/detail/${item.hash}`)}
           >
             <div className="font-mono text-sm text-blue-600 col-span-16">
@@ -108,11 +116,7 @@ export const List = () => {
 
             <div className="flex justify-center col-span-3">
               <p
-                className={`px-3 py-1 text-xs font-medium rounded-md ${
-                  item.action === 'Đã tạo'
-                    ? 'bg-green-50 text-green-700'
-                    : 'bg-red-50 text-red-700'
-                }`}
+                className={`px-3 py-1 text-xs font-medium rounded-md ${ACTION_STYLES[item.action]}`}
               >
                 {item.action}
               </p>

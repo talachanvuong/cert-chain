@@ -7,14 +7,17 @@ import { certificate } from '../config/contract'
 import { useAuth } from '../hooks/useAuth'
 
 type Classification = 'Xuất sắc' | 'Giỏi' | 'Khá'
+type Status = 'Pending' | 'Verified' | 'Revoked'
 
-interface Certificate {
+interface CertificateData {
   hash: Address
   name: string
   classification: Classification
   issuer: Address
   issuedAt: number
-  revoked: boolean
+  status: Status
+  verifier: Address
+  verifiedAt: number
   revokedAt?: number
   studentId: string
   studentName: string
@@ -33,6 +36,24 @@ const CLASSIFICATION_COLORS: Record<Classification, string> = {
   Khá: 'bg-green-100 text-green-800 border-green-300',
 }
 
+const STATUS_MAP: Record<number, Status> = {
+  0: 'Pending',
+  1: 'Verified',
+  2: 'Revoked',
+}
+
+const STATUS_COLORS: Record<Status, string> = {
+  Pending: 'bg-yellow-500',
+  Verified: 'bg-green-500',
+  Revoked: 'bg-red-500',
+}
+
+const STATUS_LABELS: Record<Status, string> = {
+  Pending: 'Chờ xác thực',
+  Verified: 'Đã xác thực',
+  Revoked: 'Đã thu hồi',
+}
+
 const formatDate = (timestamp: number) =>
   new Date(timestamp * 1000).toLocaleDateString('vi-VN')
 
@@ -43,7 +64,7 @@ export const Detail = () => {
   const { hash } = useParams<{ hash: Address }>()
   const { address } = useAuth()
 
-  const [cert, setCert] = useState<Certificate | null>(null)
+  const [cert, setCert] = useState<CertificateData | null>(null)
   const [isRevoking, setIsRevoking] = useState<boolean>(false)
 
   useEffect(() => {
@@ -53,31 +74,22 @@ export const Detail = () => {
     }
 
     const loadCertificate = async () => {
-      const data = await certificate.read.certificates([hash])
+      const data = await certificate.read.getCertificate([hash])
 
-      const issuedAt = Number(data[4])
-
-      if (!issuedAt) {
-        setCert(null)
-        return
-      }
-
+      const status = STATUS_MAP[data.status]
       let revokedAt: number | undefined
 
-      if (data[5]) {
-        const events = await certificate.getEvents.CertificateUpdated(
-          { _certificateHash: hash },
-          { fromBlock: 0n, toBlock: 'latest' }
-        )
+      if (status === 'Revoked') {
+        const events = (
+          await certificate.getEvents.CertificateUpdated(
+            { _certificateHash: hash },
+            { fromBlock: 0n, toBlock: 'latest' }
+          )
+        ).filter((e) => e.args._certificateAction === 2) // Revoked
 
-        const revokedEvent = events.find((event) => {
-          const action = event.args._certificateAction
-          return action === 1
-        })
-
-        if (revokedEvent) {
+        if (events.length > 0) {
           const block = await publicClient.getBlock({
-            blockNumber: revokedEvent.blockNumber,
+            blockNumber: events[0].blockNumber,
           })
           revokedAt = Number(block.timestamp)
         }
@@ -85,15 +97,17 @@ export const Detail = () => {
 
       setCert({
         hash,
-        name: data[1],
-        classification: CLASSIFICATION_MAP[data[2]],
-        issuer: data[3],
-        issuedAt,
-        revoked: data[5],
+        name: data.certificateName,
+        classification: CLASSIFICATION_MAP[data.classification],
+        issuer: data.issuer,
+        issuedAt: Number(data.issuedAt),
+        status,
+        verifier: data.verifier,
+        verifiedAt: Number(data.verifiedAt),
         revokedAt,
-        studentId: data[6],
-        studentName: data[7],
-        dob: Number(data[8]),
+        studentId: data.studentId,
+        studentName: data.studentName,
+        dob: Number(data.dateOfBirth),
       })
     }
 
@@ -107,23 +121,24 @@ export const Detail = () => {
     setIsRevoking(true)
 
     try {
-      const processHash = await certificate.write.revokeCertificate(
-        [cert.hash],
-        { account: address }
-      )
+      const txHash = await certificate.write.revokeCertificate([cert.hash], {
+        account: address,
+      })
 
       const receipt = await publicClient.waitForTransactionReceipt({
-        hash: processHash,
+        hash: txHash,
       })
 
       const block = await publicClient.getBlock({
         blockNumber: receipt.blockNumber,
       })
-      const revokedAt = Number(block.timestamp)
 
       toast.success('Thu hồi chứng chỉ thành công')
-
-      setCert({ ...cert, revoked: true, revokedAt })
+      setCert({
+        ...cert,
+        status: 'Revoked',
+        revokedAt: Number(block.timestamp),
+      })
     } catch {
       toast.error('Giao dịch thất bại')
     } finally {
@@ -156,16 +171,15 @@ export const Detail = () => {
             </p>
           </div>
           <p
-            className={`px-5 py-3 font-semibold rounded-lg ${
-              cert.revoked ? 'bg-red-500' : 'bg-green-500'
-            }`}
+            className={`px-5 py-3 font-semibold rounded-lg ${STATUS_COLORS[cert.status]}`}
           >
-            {cert.revoked ? 'Đã thu hồi' : 'Hợp lệ'}
+            {STATUS_LABELS[cert.status]}
           </p>
         </div>
       </div>
 
       <div className="p-8 bg-white shadow-lg rounded-b-xl">
+        {/* Thông tin sinh viên */}
         <div className="mb-8">
           <p className="mb-4 text-xl font-semibold text-gray-800">
             Thông tin sinh viên
@@ -188,8 +202,9 @@ export const Detail = () => {
           </div>
         </div>
 
-        <div className="my-8 border-t border-gray-200"></div>
+        <div className="my-8 border-t border-gray-200" />
 
+        {/* Thông tin chứng chỉ */}
         <div className="mb-8">
           <p className="mb-4 text-xl font-semibold text-gray-800">
             Thông tin chứng chỉ
@@ -216,7 +231,28 @@ export const Detail = () => {
             </p>
           </div>
 
-          {cert.revoked && cert.revokedAt && (
+          {/* Hiển thị thông tin xác thực nếu đã từng được xác thực */}
+          {cert.verifiedAt > 0 && (
+            <div className="p-4 mb-4 border-2 border-green-300 rounded-lg bg-green-50">
+              <p className="mb-3 text-sm font-semibold text-green-700">
+                Thông tin xác thực
+              </p>
+              <div className="mb-3">
+                <p className="mb-1 text-xs text-green-600">Người xác thực</p>
+                <div className="p-2 overflow-x-auto font-mono text-sm text-green-800 bg-white border border-green-200 rounded">
+                  {cert.verifier}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1 text-xs text-green-600">Ngày xác thực</p>
+                <p className="text-sm font-semibold text-green-800">
+                  {formatDateTime(cert.verifiedAt)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {cert.status === 'Revoked' && cert.revokedAt && (
             <div className="p-4 mb-4 border-2 border-red-300 rounded-lg bg-red-50">
               <p className="mb-2 text-sm text-red-600">Ngày thu hồi</p>
               <p className="font-semibold text-red-900">
@@ -226,9 +262,10 @@ export const Detail = () => {
           )}
         </div>
 
-        {!cert.revoked && (
+        {/* Revoke button — chỉ hiện khi Pending hoặc Verified */}
+        {cert.status !== 'Revoked' && (
           <>
-            <div className="my-8 border-t border-gray-200"></div>
+            <div className="my-8 border-t border-gray-200" />
             <div className="flex justify-end">
               <button
                 onClick={handleRevoke}

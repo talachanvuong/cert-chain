@@ -4,8 +4,10 @@
 
 export const certificateAbi = [
   { type: 'constructor', inputs: [], stateMutability: 'nonpayable' },
+  { type: 'error', inputs: [], name: 'InvalidStatus' },
   { type: 'error', inputs: [], name: 'NotFound' },
   { type: 'error', inputs: [], name: 'NotOwner' },
+  { type: 'error', inputs: [], name: 'OwnerCannotVerify' },
   {
     type: 'event',
     anonymous: false,
@@ -46,6 +48,15 @@ export const certificateAbi = [
   },
   {
     type: 'function',
+    inputs: [
+      { name: '_certificateHash', internalType: 'bytes32', type: 'bytes32' },
+    ],
+    name: 'approveCertificate',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
     inputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
     name: 'certificates',
     outputs: [
@@ -54,10 +65,48 @@ export const certificateAbi = [
       { name: 'classification', internalType: 'string', type: 'string' },
       { name: 'issuer', internalType: 'address', type: 'address' },
       { name: 'issuedAt', internalType: 'uint256', type: 'uint256' },
-      { name: 'revoked', internalType: 'bool', type: 'bool' },
+      {
+        name: 'status',
+        internalType: 'enum Certificate.CertificateStatus',
+        type: 'uint8',
+      },
+      { name: 'verifier', internalType: 'address', type: 'address' },
+      { name: 'verifiedAt', internalType: 'uint256', type: 'uint256' },
       { name: 'studentId', internalType: 'string', type: 'string' },
       { name: 'studentName', internalType: 'string', type: 'string' },
       { name: 'dateOfBirth', internalType: 'uint256', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_certificateHash', internalType: 'bytes32', type: 'bytes32' },
+    ],
+    name: 'getCertificate',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct Certificate.CertificateInfo',
+        type: 'tuple',
+        components: [
+          { name: 'certificateHash', internalType: 'bytes32', type: 'bytes32' },
+          { name: 'certificateName', internalType: 'string', type: 'string' },
+          { name: 'classification', internalType: 'string', type: 'string' },
+          { name: 'issuer', internalType: 'address', type: 'address' },
+          { name: 'issuedAt', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'status',
+            internalType: 'enum Certificate.CertificateStatus',
+            type: 'uint8',
+          },
+          { name: 'verifier', internalType: 'address', type: 'address' },
+          { name: 'verifiedAt', internalType: 'uint256', type: 'uint256' },
+          { name: 'studentId', internalType: 'string', type: 'string' },
+          { name: 'studentName', internalType: 'string', type: 'string' },
+          { name: 'dateOfBirth', internalType: 'uint256', type: 'uint256' },
+        ],
+      },
     ],
     stateMutability: 'view',
   },
@@ -89,31 +138,5 @@ export const certificateAbi = [
     name: 'revokeCertificate',
     outputs: [],
     stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    inputs: [
-      { name: '_certificateHash', internalType: 'bytes32', type: 'bytes32' },
-    ],
-    name: 'verifyCertificate',
-    outputs: [
-      {
-        name: '',
-        internalType: 'struct Certificate.CertificateInfo',
-        type: 'tuple',
-        components: [
-          { name: 'certificateHash', internalType: 'bytes32', type: 'bytes32' },
-          { name: 'certificateName', internalType: 'string', type: 'string' },
-          { name: 'classification', internalType: 'string', type: 'string' },
-          { name: 'issuer', internalType: 'address', type: 'address' },
-          { name: 'issuedAt', internalType: 'uint256', type: 'uint256' },
-          { name: 'revoked', internalType: 'bool', type: 'bool' },
-          { name: 'studentId', internalType: 'string', type: 'string' },
-          { name: 'studentName', internalType: 'string', type: 'string' },
-          { name: 'dateOfBirth', internalType: 'uint256', type: 'uint256' },
-        ],
-      },
-    ],
-    stateMutability: 'view',
   },
 ] as const
