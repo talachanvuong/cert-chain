@@ -80,7 +80,7 @@ export const VerifierDashboard = () => {
       })
     }
 
-    setCerts(results)
+    setCerts(results.sort((a, b) => b.issuedAt - a.issuedAt))
     setLoading(false)
   }
 
